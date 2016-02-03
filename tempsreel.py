@@ -40,7 +40,10 @@ def crawler():
         print str(r.status_code) + " " + str(r.elapsed)
         # Parse the content
         a_tag = SoupStrainer('a')
-        a_tags = [tag for tag in BeautifulSoup(r.text, parseOnlyThese=a_tag)]
+        try:
+            a_tags = [tag for tag in BeautifulSoup(r.text, parseOnlyThese=a_tag)]
+        except:
+            pass
         topic25 = 0
         link_list = []
         for line in a_tags:
@@ -57,6 +60,12 @@ def crawler():
         get_pseudos(response)
         i+=1
 
+def get_topics():
+    return
+
+def get_post():
+    return
+
 def get_pseudos(response):
     i = 1
     nb_pseudos = 0
@@ -64,7 +73,10 @@ def get_pseudos(response):
         print str(i) + " ==================================================="
         i+=1
         pseudo = SoupStrainer('div',{'class': 'bloc-header'})
-        soup = BeautifulSoup(link.text, parseOnlyThese=pseudo)
+        try:
+            soup = BeautifulSoup(link.text, parseOnlyThese=pseudo)
+        except:
+            pass
         pseudal = soup.find_all('span', attrs={'class':'bloc-pseudo-msg'})
         list_pseudos = []
         for pseud in pseudal:
