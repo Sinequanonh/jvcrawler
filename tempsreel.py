@@ -38,29 +38,27 @@ def crawler():
             except:
                 continue
         print str(r.status_code) + " " + str(r.elapsed)
-        # Parse the content
-        a_tag = SoupStrainer('a')
-        try:
-            a_tags = [tag for tag in BeautifulSoup(r.text, parseOnlyThese=a_tag)]
-        except:
-            pass
-        topic25 = 0
-        link_list = []
-        for line in a_tags:
-            if "forums/42" in line['href']:
-                print line['href']
-                topic_link = line['href'].replace('/forums/', 'https://www.jeuxvideo.com/forums/')
-                link_list.insert(topic25, topic_link)
-                topic25+=1
-            if topic25 > 24:
-                break
+        
+        # get topics from the page
+        topics_jvc = SoupStrainer('a', 'lien-jv topic-title')
+        topics_jvc = [tag for tag in BeautifulSoup(r.text, parseOnlyThese=topics_jvc)]
+        j = 0
+        link_list = [] 
+        for topic_lien in topics_jvc:
+            print topic_lien['href']
+            topic_link = topic_lien['href'].replace('/forums/', 'https://www.jeuxvideo.com/forums/')
+            link_list.insert(j, topic_link)
+            j+=1
+        # Async requests the 25 topics all in once
         rs = (grequests.get(u) for u in link_list)
-        # Async request the 25 topics all in once
         response = grequests.map(rs)
+        get_pages(response)
         get_pseudos(response)
         i+=1
+        return
 
-def get_topics():
+def get_pages(response):
+    
     return
 
 def get_post():
