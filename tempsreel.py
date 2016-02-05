@@ -38,26 +38,52 @@ def crawler():
             except:
                 continue
         print str(r.status_code) + " " + str(r.elapsed)
-        
         # get topics from the page
-        topics_jvc = SoupStrainer('a', 'lien-jv topic-title')
-        topics_jvc = [tag for tag in BeautifulSoup(r.text, parseOnlyThese=topics_jvc)]
-        j = 0
-        link_list = [] 
-        for topic_lien in topics_jvc:
-            print topic_lien['href']
-            topic_link = topic_lien['href'].replace('/forums/', 'https://www.jeuxvideo.com/forums/')
-            link_list.insert(j, topic_link)
-            j+=1
+        strainer = SoupStrainer('ul', {'class': re.compile(r'\btopic-list\b')})
+        container_topics = BeautifulSoup(r.text, "html.parser", parse_only=strainer)
+        les_topics = container_topics.find_all('li')
+
+        # Parse each <li>
+        topics = []
+        for topic in les_topics:
+            #Get info from topic url
+            topic_name = topic.find('a', 'lien-jv topic-title')
+            if topic_name:
+                topic_title = topic_name['title']
+                topic_link = topic_name['href']
+                print topic_title
+                print topic_link
+                topic_id = topic_link.split('-')[2]
+                print topic_id
+            topic_author = topic.find('span', re.compile(r'\btopic-author\b'))
+            if topic_author:
+                topic_author = topic_author.text.replace(' ', '').replace('\n', '')
+                if topic_name:
+                    topics.append({
+                            'title': topic_title,
+                            'url': topic_link,
+                            'id': topic_id,
+                            'author': topic_author
+                            })
+            print "======================="
+
+
         # Async requests the 25 topics all in once
-        rs = (grequests.get(u) for u in link_list)
-        response = grequests.map(rs)
-        get_pages(response)
-        get_pseudos(response)
+#        rs = (grequests.get(u) for u in link_list)
+ #       responses = grequests.map(rs)
+
+#        get_pseudos(response)
         i+=1
         return
 
+# from the first page of a topic
 def get_pages(response):
+    nextStrainer = SoupStrainer('div', 'pagi-after')
+    next = BeautifulSoup(response.text, parseOnlyThese=nextStrainer)
+    print next
+#    caca =[tag for tag in BeautifulSoup(response.text, parseOnlyThese=nextStrainer)]
+#   for prout in caca:
+ #       print prout['href']
     
     return
 
