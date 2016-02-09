@@ -109,7 +109,7 @@ def get_pages(response, topics, link_list):
             link_list[i] = '-'.join(previous)
             list_pages.append(link_list[i])
             print link_list[i]
-            if nb_requests > 8:
+            if nb_requests > 4:
                 rs = (grequests.get(u) for u in list_pages)
                 laresponse = grequests.map(rs)
                 get_pseudos(laresponse)
@@ -146,8 +146,7 @@ def get_pseudos(response):
             #insertPseudo(pseudotoinsert)
             nb_insert+=1
         print list_pseudos
-        #insertPseudo(list_pseudos)
-    link.close()
+        insertPseudo(list_pseudos)
 
         
 
