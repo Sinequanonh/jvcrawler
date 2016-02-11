@@ -88,6 +88,8 @@ def crawler():
         rs = (grequests.get(u) for u in link_list)
         response = grequests.map(rs)
         get_pages(response, topics, link_list)
+        del link_list
+        del response
 
 #        get_pseudos(response)
         i+=1
@@ -109,7 +111,7 @@ def get_pages(response, topics, link_list):
             link_list[i] = '-'.join(previous)
             list_pages.append(link_list[i])
             print link_list[i]
-            if nb_requests > 4:
+            if nb_requests > 8:
                 rs = (grequests.get(u) for u in list_pages)
                 laresponse = grequests.map(rs)
                 get_pseudos(laresponse)
@@ -117,7 +119,7 @@ def get_pages(response, topics, link_list):
                 del list_pages[:]
             nb_requests+=1
             
-        rs = (grequests.get(u) for u in list_pages)
+        rs = (grequests.get(u, stream=True) for u in list_pages)
         laresponse = grequests.map(rs)
         get_pseudos(laresponse)
         res.close()
@@ -134,19 +136,27 @@ def get_pseudos(response):
     print "SIZE OF RES" + str(len(response))
     pseudo = SoupStrainer('div',{'class': 'bloc-header'})
     for link in response:
-        print str(i) + " ==================================================="
-        i+=1
-        soup = BeautifulSoup(link.text, parseOnlyThese=pseudo)
-        pseudal = soup.find_all('span', attrs={'class':'bloc-pseudo-msg'})
-        list_pseudos = []
-        for pseud in pseudal:
-            pseud = pseud.getText().replace(' ', '').replace('\n', '')
-            pseudotoinsert = {"pseudo": pseud}
-            list_pseudos.insert(nb_insert, pseudotoinsert)
+        if link:
+            print str(i) + " ==================================================="
+            i+=1
+            soup = BeautifulSoup(link.text, parseOnlyThese=pseudo)
+            pseudal = soup.find_all('span', attrs={'class':'bloc-pseudo-msg'})
+            list_pseudos = []
+            for pseud in pseudal:
+                pseud = pseud.getText().replace(' ', '').replace('\n', '')
+                pseudotoinsert = {"pseudo": pseud}
+                list_pseudos.insert(nb_insert, pseudotoinsert)
             #insertPseudo(pseudotoinsert)
-            nb_insert+=1
-        print list_pseudos
-        insertPseudo(list_pseudos)
+                nb_insert+=1
+            print list_pseudos
+#            thread.start_new_thread(insertPseudo, (list_pseudos, ))
+            insertPseudo(list_pseudos)
+        try:
+            link.close()
+        except:
+            pass
+            
+#        insertPseudo(list_pseudos)
 
         
 
