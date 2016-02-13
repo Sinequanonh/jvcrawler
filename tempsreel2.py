@@ -20,6 +20,8 @@ DEBUG_MODE = True
 client = MongoClient()
 # Database
 db = client['jvcrawler']
+db.pseudo.ensure_index("pseudo", unique = True)
+#db.bears.create_index("pseudo")
 
 ###
 # FUNCTIONS
@@ -100,14 +102,16 @@ def fromLastPage(bulk_request, link_list):
 			link_list[i] = '-'.join(previous)
 			list_pages.append(link_list[i])
 			print link_list[i]
-			if nb_requests > 19:
+			if nb_requests > 1:
 				r = bulkRequests(list_pages)
-				nb_requests = 0
 				get_pseudos(r)
 				del list_pages[:]
+				nb_requests = 0
 			nb_requests+=1
 		res.close()
 		i+=1
+	r = bulkRequests(list_pages)
+	get_pseudos(r)
 
 	elapsedTime(start_time)
 	return
@@ -119,23 +123,36 @@ def parseMessages():
 	elapsedTime(start_time)
 	return
 
-def singleInsertDatabase():
+def singleInsertDatabase(pseudo):
 	start_time = time.time()
 	debugFunction()
-
+	try:
+		db.pseudo.insert_one(pseudo).inserted_id
+	except:
+		db.pseudo.update_one({
+					  'pseudo': pseudo['pseudo']
+					},{
+					  '$inc': {
+					    'nb_msg': 1
+					  }
+					}, upsert=False)
+		#db.pseudo.findAndModify({
+			#query: {"pseudo": pseudo},
+			#update: {$inc: {"nb_msg": 1}}
+			#})
+		pass
 	elapsedTime(start_time)
 	return
 
 def bulkInsertDatabase(pseudos):
 	start_time = time.time()
 	debugFunction()
-	# Mongod instance
-	global client
-	# Database
-	global db
 	#Insert post to database
 	#db.pseudo.insert_one(pseudo).inserted_id
-	db.pseudo.insert_many(pseudos)
+	try:
+		db.pseudo.insert_many(pseudos)
+	except:
+		pass
 
 	elapsedTime(start_time)
 	return
@@ -149,18 +166,22 @@ def get_pseudos(response):
         if link:
             print str(i) + " ==================================================="
             i+=1
-            soup = BeautifulSoup(link.text, parseOnlyThese=pseudo)
+            soup = BeautifulSoup(link.text, parse_only=pseudo)
             pseudal = soup.find_all('span', attrs={'class':'bloc-pseudo-msg'})
             list_pseudos = []
+            nb_insert = 0
             for pseud in pseudal:
                 pseud = pseud.getText().replace(' ', '').replace('\n', '')
-                pseudotoinsert = {"pseudo": pseud}
+                pseudotoinsert = {"pseudo": pseud,
+                				  "nb_msg": 1}
                 list_pseudos.insert(nb_insert, pseudotoinsert)
+                print pseud
+                singleInsertDatabase(pseudotoinsert)
                 nb_insert+=1
-            print list_pseudos
+            #print list_pseudos
+            #bulkInsertDatabase(list_pseudos)
 #            thread.start_new_thread(insertPseudo, (list_pseudos, ))
             #insertPseudo(list_pseudos)
-	bulkInsertDatabase(list_pseudos)
         try:
             link.close()
         except:
