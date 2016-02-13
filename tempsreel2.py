@@ -16,7 +16,7 @@ from pymongo import MongoClient
 import pymongo
 import inspect
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 client = MongoClient()
 # Database
 db = client['jvcrawler']
@@ -102,9 +102,10 @@ def fromLastPage(bulk_request, link_list):
 			link_list[i] = '-'.join(previous)
 			list_pages.append(link_list[i])
 			print link_list[i]
-			if nb_requests > 1:
+			if nb_requests > 7:
 				r = bulkRequests(list_pages)
-				get_messages(r)
+				if get_messages(r) == 1:
+					break
 				#get_pseudos(r)
 				del list_pages[:]
 				nb_requests = 0
@@ -113,7 +114,8 @@ def fromLastPage(bulk_request, link_list):
 		i+=1
 	r = bulkRequests(list_pages)
 	#get_pseudos(r)
-	get_messages(r)
+	if get_messages(r) == 1:
+		return
 
 	elapsedTime(start_time)
 	return
@@ -146,12 +148,14 @@ def insertPost(post):
 	start_time = time.time()
 	debugFunction()
 	try:
+		insert_error = 0
 		db.jvstalker.insert_one(post).inserted_id
 	except:
+		insert_error = 1
 		pass
 	insertPseudo(post)
 	elapsedTime(start_time)
-	return
+	return insert_error
 
 def bulkInsertDatabase(pseudos):
 	start_time = time.time()
@@ -176,21 +180,30 @@ def get_messages(response):
 		i = 0
 		for s in soup:
 			# Pseudo
-			pseudo = s.find('span', attrs={'class': 'bloc-pseudo-msg'})
-			pseudo = pseudo.getText().replace(' ', '').replace('\n', '')
-			# Message
-			message = s.find('div', attrs={'class': 'text-enrichi-forum'}).renderContents()
-			# Date
-			date = s.find('div', attrs={'class': 'bloc-date-msg'})
-			date = date.text.replace(' ', '').replace('\n', '')
-			# Ancre
-			ancre = ancres[i]['id'].split('_')[1]
-			print ancre
-			pseudotoinsert = {"pseudo": pseudo, "message": message, "date": date, "ancre": ancre}
-			insertPost(pseudotoinsert)
-			i+=1
+			try:
+				pseudo = s.find('span', attrs={'class': 'bloc-pseudo-msg'})
+				pseudo = pseudo.getText().replace(' ', '').replace('\n', '')
+				# Message
+				message = s.find('div', attrs={'class': 'text-enrichi-forum'}).renderContents()
+				# Date
+				date = s.find('div', attrs={'class': 'bloc-date-msg'})
+				date = date.text.replace(' ', '').replace('\n', '')
+				# Ancre
+				ancre = ancres[i]['id'].split('_')[1]
+				print ancre
+				pseudotoinsert = {"pseudo": pseudo, "message": message, "date": date, "ancre": ancre}
+				if insertPost(pseudotoinsert) == 1:
+					return 1
+				i+=1
+			except:
+				pass
+		i = 0
+		try:
+			res.close()
+		except:
+			pass
 
-	return
+	return 0
 
 def get_pseudos(response):
     i = 1
