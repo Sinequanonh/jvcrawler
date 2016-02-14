@@ -111,7 +111,7 @@ def fromLastPage(bulk_request, link_list):
 			link_list[i] = '-'.join(previous)
 			list_pages.append(link_list[i])
 			print link_list[i]
-			if nb_requests > 1:
+			if nb_requests > 4:
 				r = bulkRequests(list_pages)
 				if get_messages(r) == 1:
 					break
@@ -167,6 +167,13 @@ def insertPost(post):
 	elapsedTime(start_time)
 	return insert_error
 
+def insertGalerie(shack):
+	try:
+		db.galerie.insert_one(shack).insert_id
+	except:
+		pass
+	return
+
 def bulkInsertDatabase(pseudos):
 	start_time = time.time()
 	debugFunction()
@@ -194,19 +201,32 @@ def get_messages(response):
 			print pseudo
 			# Ancre
 			ancre = s['data-id']
-			print ancre
+			#print ancre
 			# Message
 			message = s.find('div', attrs={'class': 'text-enrichi-forum'}).renderContents()
-			print message
+			#print message
 			# Date
 			date = s.find('div', attrs={'class': 'bloc-date-msg'}).text.replace('\n', '')
 			#print date
 			date = parse_date(date)
-			print date
+			#print date
 			# Avatar
 			avatar = s.find('img', attrs={'class': 'user-avatar-msg'})
 			avatar = avatar['data-srcset'].replace('avatar-sm', 'avatar-md').replace('//image.jeuxvideo.com/', '') # Add 'image.jeuxvideo.com' in frontend
-			print avatar
+			#print avatar
+			# Galerie
+			if "noelshack.com" in message:
+				noelshack = BeautifulSoup(message, "html.parser")
+				try:
+					les_noels = noelshack.find_all('a', attrs={'data-def': 'NOELSHACK'})
+					for le_noel in les_noels:
+						shack = str(le_noel.img['src']).replace('//image.noelshack.com/minis/', '') # Add 'image.noelshack.com/minis/' in frontend for a miniature
+																									# Add 'http://image.noelshack.com/fichiers/' in frontend for fullpicture
+						print shack
+						noelshacktoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "shack": shack}
+						insertGalerie(noelshacktoinsert)
+				except:
+					pass
 			print "================================================================================================"
 			pseudotoinsert = {"pseudo": pseudo, "message": message, "date": date, "ancre": ancre, "avatar": avatar}
 			if insertPost(pseudotoinsert) == 1:
@@ -249,7 +269,6 @@ def parse_date(date):
 	y = p_date[2]
 	h = p_date[4].split(':')
 	ladate = datetime(int(y), int(m), int(d), int(h[0]), int(h[1]), int(h[2]))
-	print ladate
 	return ladate
 
 def singleRequest(url, s):
