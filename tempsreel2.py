@@ -5,6 +5,7 @@ import re
 import thread
 import time
 import datetime
+from datetime import datetime
 import math
 import requests
 import gevent
@@ -15,6 +16,7 @@ from bs4 import BeautifulSoup, SoupStrainer
 from pymongo import MongoClient
 import pymongo
 import inspect
+from cgi import escape
 
 DEBUG_MODE = False
 client = MongoClient()
@@ -81,11 +83,18 @@ def bulkRequests(topic_list):
 	start_time = time.time()
 	debugFunction()
 
-	rs = (grequests.get(u) for u in topic_list)
-	response = grequests.map(rs)
+	try:
+		rs = (grequests.get(u, timeout=5) for u in topic_list)
+		response = grequests.map(rs)
+		return response
+	except:
+		s = (grequests.get(u, timeout=5) for u in topic_list)
+		response = grequests.map(rs)
+		return response
 	
 	elapsedTime(start_time)
-	return response
+	return
+	
 
 def fromLastPage(bulk_request, link_list):
 	start_time = time.time()
@@ -102,18 +111,19 @@ def fromLastPage(bulk_request, link_list):
 			link_list[i] = '-'.join(previous)
 			list_pages.append(link_list[i])
 			print link_list[i]
-			if nb_requests > 7:
+			if nb_requests > 1:
 				r = bulkRequests(list_pages)
 				if get_messages(r) == 1:
 					break
-				#get_pseudos(r)
 				del list_pages[:]
 				nb_requests = 0
 			nb_requests+=1
-		res.close()
+		try:
+			res.close()
+		except:
+			pass
 		i+=1
 	r = bulkRequests(list_pages)
-	#get_pseudos(r)
 	if get_messages(r) == 1:
 		return
 
@@ -171,71 +181,76 @@ def bulkInsertDatabase(pseudos):
 	return
 
 def get_messages(response):
-	bloc_message = SoupStrainer('div', {'class': 'inner-head-content'})
-	bloc_ancre = SoupStrainer('span', {'class': 'bloc-message-forum-anchor'})
+	bloc_message = SoupStrainer('div', {'class': 'bloc-message-forum '})
 	for res in response:
+		if res == None:
+			continue
 		soup = BeautifulSoup(res.text, "html.parser", parse_only=bloc_message)
-		soup_ancre = BeautifulSoup(res.text, "html.parser", parse_only=bloc_ancre)
-		ancres = soup_ancre.find_all('span')
-		i = 0
 		for s in soup:
 			# Pseudo
-			try:
-				pseudo = s.find('span', attrs={'class': 'bloc-pseudo-msg'})
-				pseudo = pseudo.getText().replace(' ', '').replace('\n', '')
-				# Message
-				message = s.find('div', attrs={'class': 'text-enrichi-forum'}).renderContents()
-				# Date
-				date = s.find('div', attrs={'class': 'bloc-date-msg'})
-				date = date.text.replace(' ', '').replace('\n', '')
-				# Ancre
-				ancre = ancres[i]['id'].split('_')[1]
-				print ancre
-				pseudotoinsert = {"pseudo": pseudo, "message": message, "date": date, "ancre": ancre}
-				if insertPost(pseudotoinsert) == 1:
-					return 1
-				i+=1
-			except:
-				pass
-		i = 0
+			pseudo = s.find('span', attrs={'class': 'bloc-pseudo-msg'})
+			pseudo = pseudo.getText().replace(' ', '').replace('\n', '')
+			#sys.stdout.write(pseudo)
+			print pseudo
+			# Ancre
+			ancre = s['data-id']
+			print ancre
+			# Message
+			message = s.find('div', attrs={'class': 'text-enrichi-forum'}).renderContents()
+			print message
+			# Date
+			date = s.find('div', attrs={'class': 'bloc-date-msg'}).text.replace('\n', '')
+			#print date
+			date = parse_date(date)
+			print date
+			# Avatar
+			avatar = s.find('img', attrs={'class': 'user-avatar-msg'})
+			avatar = avatar['data-srcset'].replace('avatar-sm', 'avatar-md').replace('//image.jeuxvideo.com/', '') # Add 'image.jeuxvideo.com' in frontend
+			print avatar
+			print "================================================================================================"
+			pseudotoinsert = {"pseudo": pseudo, "message": message, "date": date, "ancre": ancre, "avatar": avatar}
+			if insertPost(pseudotoinsert) == 1:
+ 				return 1
 		try:
 			res.close()
 		except:
 			pass
-
 	return 0
 
-def get_pseudos(response):
-    i = 1
-    nb_insert = 0
-    print "SIZE OF RES" + str(len(response))
-    pseudo = SoupStrainer('div', {'class': 'bloc-header'})
-    for link in response:
-        if link:
-            print str(i) + " ==================================================="
-            i+=1
-            soup = BeautifulSoup(link.text, "html.parser", parse_only=pseudo)
-            pseudal = soup.find_all('span', attrs={'class':'bloc-pseudo-msg'})
-            blocmessage = soup.find_all('div', attrs={'class':'text-enrichi-forum'})
-            message = blocmessage[i].renderContents()
-            list_pseudos = []
-            nb_insert = 0
-            for pseud in pseudal:
-                pseud = pseud.getText().replace(' ', '').replace('\n', '')
-                pseudotoinsert = {"pseudo": pseud,
-                				  "nb_msg": 1}
-                list_pseudos.insert(nb_insert, pseudotoinsert)
-                print pseud
-                singleInsertDatabase(pseudotoinsert)
-                nb_insert+=1
-            #print list_pseudos
-            #bulkInsertDatabase(list_pseudos)
-#            thread.start_new_thread(insertPseudo, (list_pseudos, ))
-            #insertPseudo(list_pseudos)
-        try:
-            link.close()
-        except:
-            pass
+def parse_date(date):
+	p_date = date.split(' ')
+	# Encode characters
+	d = p_date[0]
+	p_date[1] = p_date[1].encode('utf8', 'replace')
+	if 'janvier' in p_date[1]:
+		m = '01'
+	elif 'février' in p_date[1]:
+		m = '02'
+	elif 'mars' in p_date[1]:
+		m = '03'
+	elif 'avril' in p_date[1]:
+		m = '04'
+	elif 'mai' in p_date[1]:
+		m = '05'
+	elif 'juin' in p_date[1]:
+		m = '06'
+	elif 'juillet' in p_date[1]:
+		m = '07'
+	elif 'août' in p_date[1]:
+		m = '08'
+	elif 'septembre' in p_date[1]:
+		m = '09'
+	elif 'octobre' in p_date[1]:
+		m = '10'
+	elif 'novembre' in p_date[1]:
+		m = '11'
+	elif 'décembre' in p_date[1]:
+		m = '12'
+	y = p_date[2]
+	h = p_date[4].split(':')
+	ladate = datetime(int(y), int(m), int(d), int(h[0]), int(h[1]), int(h[2]))
+	print ladate
+	return ladate
 
 def singleRequest(url, s):
 	try:
