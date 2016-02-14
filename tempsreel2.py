@@ -141,14 +141,17 @@ def insertPseudo(pseudo):
 	start_time = time.time()
 	debugFunction()
 	pseudotoinsert = {"pseudo": pseudo['pseudo'],
-                	  "nb_msg": 1}
+                	  "nb_msg": 1,
+                	  "nb_smileys": int(pseudo['nb_smileys']),
+                	  "nb_mots": int(pseudo['nb_mots'])}
 	try:
 		db.pseudo.insert_one(pseudotoinsert).inserted_id
 	except:
-		pass
 		db.pseudo.update_one({'pseudo': pseudo['pseudo']}, {
 					  '$inc': {
-					    'nb_msg': 1
+					    'nb_msg': 1,
+					    'nb_smileys': int(pseudo['nb_smileys']),
+					    "nb_mots": int(pseudo['nb_mots'])
 					  }
 					}, upsert=False)
 	elapsedTime(start_time)
@@ -195,24 +198,49 @@ def get_messages(response):
 		soup = BeautifulSoup(res.text, "html.parser", parse_only=bloc_message)
 		for s in soup:
 			# Pseudo
-			pseudo = s.find('span', attrs={'class': 'bloc-pseudo-msg'})
-			pseudo = pseudo.getText().replace(' ', '').replace('\n', '')
+			try:
+				pseudo = s.find('span', attrs={'class': 'bloc-pseudo-msg'})
+				pseudo = pseudo.getText().replace(' ', '').replace('\n', '')
+			except:
+				pseudo = "Pseudo supprimé"
 			#sys.stdout.write(pseudo)
 			print pseudo
 			# Ancre
 			ancre = s['data-id']
-			#print ancre
+			print ancre
 			# Message
-			message = s.find('div', attrs={'class': 'text-enrichi-forum'}).renderContents()
+			message_raw = s.find('div', attrs={'class': 'text-enrichi-forum'})
+			message = message_raw.renderContents()
+			message_raw = message_raw.getText()
+			message_raw = ' '.join(message_raw.split())
+			print message_raw
+			nb_mots = len(message_raw.split(' '))
 			#print message
+			print "nb mots: " + str(nb_mots)
+			#print message
+			# Smileys
+			nb_smileys = 0
+			if "data-def=\"SMILEYS\"" in message:
+				smileys = BeautifulSoup(message, "html.parser")
+				les_smileys = smileys.find_all('img', attrs={'data-def': 'SMILEYS'})
+				smiley_list = []
+				for smiley in les_smileys:
+					smi = smiley['src'].replace('//', '')
+					print smiley['alt']
+					smi = smi.split('/')[2].replace('.gif', '')
+					nb_smileys+=1
 			# Date
-			date = s.find('div', attrs={'class': 'bloc-date-msg'}).text.replace('\n', '')
+			date = s.find('div', attrs={'class': 'bloc-date-msg'}).text.replace('\n', '').replace('"', '').lstrip()
+			print date
 			#print date
 			date = parse_date(date)
 			#print date
 			# Avatar
-			avatar = s.find('img', attrs={'class': 'user-avatar-msg'})
-			avatar = avatar['data-srcset'].replace('avatar-sm', 'avatar-md').replace('//image.jeuxvideo.com/', '') # Add 'image.jeuxvideo.com' in frontend
+			try:
+				avatar = s.find('img', attrs={'class': 'user-avatar-msg'})
+				avatar = avatar['data-srcset'].replace('avatar-sm', 'avatar-md').replace('//image.jeuxvideo.com/', '') # Add 'image.jeuxvideo.com' in frontend
+			except:
+				avatar = ""
 			#print avatar
 			# Galerie
 			if "noelshack.com" in message:
@@ -228,7 +256,7 @@ def get_messages(response):
 				except:
 					pass
 			print "================================================================================================"
-			pseudotoinsert = {"pseudo": pseudo, "message": message, "date": date, "ancre": ancre, "avatar": avatar}
+			pseudotoinsert = {"pseudo": pseudo, "message": message, "date": date, "ancre": ancre, "avatar": avatar, "nb_smileys": nb_smileys, "nb_mots": nb_mots}
 			if insertPost(pseudotoinsert) == 1:
  				return 1
 		try:
