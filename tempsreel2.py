@@ -3,6 +3,7 @@
 import sys
 import re
 import thread
+from threading import Thread
 import time
 import datetime
 from datetime import datetime
@@ -19,7 +20,7 @@ import inspect
 from cgi import escape
 
 DEBUG_MODE = False
-client = MongoClient()
+client = MongoClient(maxPoolSize=50, waitQueueMultiple=10)
 # Database
 db = client['jvcrawler']
 db.pseudo.ensure_index("pseudo", unique = True)
@@ -111,7 +112,7 @@ def fromLastPage(bulk_request, link_list):
 			link_list[i] = '-'.join(previous)
 			list_pages.append(link_list[i])
 			print link_list[i]
-			if nb_requests > 4:
+			if nb_requests > 0:
 				r = bulkRequests(list_pages)
 				if get_messages(r) == 1:
 					break
@@ -143,7 +144,9 @@ def insertPseudo(pseudo):
 	pseudotoinsert = {"pseudo": pseudo['pseudo'],
                 	  "nb_msg": 1,
                 	  "nb_smileys": int(pseudo['nb_smileys']),
-                	  "nb_mots": int(pseudo['nb_mots'])}
+                	  "nb_mots": int(pseudo['nb_mots']),
+                	  "nb_chars": int(pseudo['nb_chars'])
+                	  }
 	try:
 		db.pseudo.insert_one(pseudotoinsert).inserted_id
 	except:
@@ -151,7 +154,8 @@ def insertPseudo(pseudo):
 					  '$inc': {
 					    'nb_msg': 1,
 					    'nb_smileys': int(pseudo['nb_smileys']),
-					    "nb_mots": int(pseudo['nb_mots'])
+					    "nb_mots": int(pseudo['nb_mots']),
+					    "nb_chars": int(pseudo['nb_chars'])
 					  }
 					}, upsert=False)
 	elapsedTime(start_time)
@@ -175,6 +179,17 @@ def insertGalerie(shack):
 		db.galerie.insert_one(shack).insert_id
 	except:
 		pass
+	return
+
+def insertSmileys(smiley, pseudo):
+	for smi in smiley:
+		#print smi # Smiley
+		#print smiley[smi] # nb de ce smiley
+		return
+		db.pseudo.update_one({'pseudo': pseudo}, {
+						'$inc': {
+					    'smiley.$.18': 1,
+					}}, upsert=False)
 	return
 
 def bulkInsertDatabase(pseudos):
@@ -207,31 +222,41 @@ def get_messages(response):
 			print pseudo
 			# Ancre
 			ancre = s['data-id']
-			print ancre
+			#print ancre
 			# Message
 			message_raw = s.find('div', attrs={'class': 'text-enrichi-forum'})
 			message = message_raw.renderContents()
 			message_raw = message_raw.getText()
 			message_raw = ' '.join(message_raw.split())
-			print message_raw
+			#print message_raw
 			nb_mots = len(message_raw.split(' '))
+			nb_chars = len(message_raw)
 			#print message
-			print "nb mots: " + str(nb_mots)
+			#print "nb mots: " + str(nb_mots)
 			#print message
 			# Smileys
 			nb_smileys = 0
+			try:
+				del smiley_list
+			except:
+				pass
 			if "data-def=\"SMILEYS\"" in message:
 				smileys = BeautifulSoup(message, "html.parser")
 				les_smileys = smileys.find_all('img', attrs={'data-def': 'SMILEYS'})
-				smiley_list = []
+				smiley_list = {}
 				for smiley in les_smileys:
 					smi = smiley['src'].replace('//', '')
-					print smiley['alt']
+					#print smiley['alt']
 					smi = smi.split('/')[2].replace('.gif', '')
+					if smiley_list.has_key(str(smi)):
+						smiley_list[str(smi)]+=1
+					else:
+						smiley_list[str(smi)] = 1
 					nb_smileys+=1
+				#print smiley_list
 			# Date
 			date = s.find('div', attrs={'class': 'bloc-date-msg'}).text.replace('\n', '').replace('"', '').lstrip()
-			print date
+			#print date
 			#print date
 			date = parse_date(date)
 			#print date
@@ -255,14 +280,22 @@ def get_messages(response):
 						insertGalerie(noelshacktoinsert)
 				except:
 					pass
-			print "================================================================================================"
-			pseudotoinsert = {"pseudo": pseudo, "message": message, "date": date, "ancre": ancre, "avatar": avatar, "nb_smileys": nb_smileys, "nb_mots": nb_mots}
-			if insertPost(pseudotoinsert) == 1:
- 				return 1
-		try:
-			res.close()
-		except:
-			pass
+			#print "================================================================================================"
+			pseudotoinsert = {"pseudo": pseudo, "message": message, "date": date, "ancre": ancre, "avatar": avatar, "nb_smileys": nb_smileys, "nb_mots": nb_mots, "nb_chars": nb_chars}
+			try:
+				1#insertSmileys(smiley_list, pseudo)
+			except:
+				pass
+			#thread.start_new_thread(insertPost, (pseudotoinsert,))
+			thread1 = Thread(target=insertPost, args=(pseudotoinsert,))
+			thread1.start()
+		   	thread1.join()
+			#if insertPost(pseudotoinsert) == 1:
+ 				#return 1
+		# try:
+		# 	res.close()
+		# except:
+		# 	pass
 	return 0
 
 def parse_date(date):
