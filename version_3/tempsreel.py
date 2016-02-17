@@ -38,11 +38,11 @@ def mainPage():
 	s = requests.Session()
 	url_base = "https://www.jeuxvideo.com/forums/0-"
 	#id_forum = input("Forum id: ")
-	id_forum = 1000021
+	id_forum = 51
 	url_middle = "-0-1-0-"
-	url_page = input("Forum page: ")
-	#url_page = 1
-	url_end = "-0-communaute.htm"
+	#url_page = input("Forum page: ")
+	url_page = 1
+	url_end = "-0-blabla-18-25-ans.htm"
 	# Main loop
 	while 1:
 		url = url_base + str(id_forum) + url_middle + str(url_page) + url_end
@@ -50,7 +50,7 @@ def mainPage():
 		r = singleRequest(url, s)
 		topic_list = get25Topics(r)
 		fromLastPage(topic_list, s)
-		url_page+=25
+		#url_page+=25
 	return
 
 def singleRequest(url, s):
@@ -109,6 +109,7 @@ def get_messages(response):
 		return 0
 	bloc_message = SoupStrainer('div', {'class': 'bloc-message-forum '})
 	soup = BeautifulSoup(response.text, "html.parser", parse_only=bloc_message)
+	leave = 0
 	for s in soup:
 		if s == None:
 			continue
@@ -192,14 +193,10 @@ def get_messages(response):
 	 #   	thread1.join()
 		if insertPost(pseudotoinsert) == 1:
 			print red + "None" + white 
-			return 1
+			leave = 1
 		else:
-			print magenta + pseudo + white
-	# try:
-	# 	res.close()
-	# except:
-	# 	pass
-	return 0
+			print magenta + pseudo + yellow + ' ' + str(date) + white
+	return leave
 
 def parse_date(date):
 	p_date = date.split(' ')
