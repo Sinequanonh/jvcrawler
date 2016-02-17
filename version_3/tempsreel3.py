@@ -32,6 +32,7 @@ client = MongoClient(maxPoolSize=50, waitQueueMultiple=10)
 db = client['jvcrawler']
 db.pseudo.ensure_index("pseudo", unique = True)
 db.jvstalker.ensure_index("ancre", unique = True)
+db.galerie.ensure_index("ancre", unique = True)
 
 def mainPage():
 	s = requests.Session()
@@ -39,8 +40,8 @@ def mainPage():
 	#id_forum = input("Forum id: ")
 	id_forum = 1000021
 	url_middle = "-0-1-0-"
-	#url_page = input("Forum page: ")
-	url_page = 1
+	url_page = input("Forum page: ")
+	#url_page = 1
 	url_end = "-0-communaute.htm"
 	# Main loop
 	while 1:
@@ -96,11 +97,7 @@ def fromLastPage(link_list, s):
 			previous_page -= 1
 			previous[3] = str(previous_page)
 			link_list[i] = '-'.join(previous)
-			if i % 2 == 1:
-				color = magenta
-			else:
-				color = cyan
-			print color + link_list[i] + white
+			print cyan + link_list[i] + white
 			res = singleRequest(link_list[i], s)
 			if get_messages(res) == 1:
 				break
@@ -122,7 +119,7 @@ def get_messages(response):
 		except:
 			pseudo = "Pseudo supprimé"
 		#sys.stdout.write(pseudo)
-		print pseudo
+		#print pseudo
 		# Ancre
 		ancre = s['data-id']
 		#print ancre
@@ -194,7 +191,10 @@ def get_messages(response):
 		# thread1.start()
 	 #   	thread1.join()
 		if insertPost(pseudotoinsert) == 1:
-				return 1
+			print red + "None" + white 
+			return 1
+		else:
+			print magenta + pseudo + white
 	# try:
 	# 	res.close()
 	# except:
