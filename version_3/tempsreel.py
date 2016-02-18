@@ -32,17 +32,17 @@ client = MongoClient(maxPoolSize=50, waitQueueMultiple=10)
 db = client['jvcrawler']
 db.pseudo.ensure_index("pseudo", unique = True)
 db.jvstalker.ensure_index("ancre", unique = True)
-db.galerie.ensure_index("ancre", unique = True)
+db.galerie.ensure_index("shack", unique = True)
 
 def mainPage():
 	s = requests.Session()
 	url_base = "https://www.jeuxvideo.com/forums/0-"
 	#id_forum = input("Forum id: ")
-	id_forum = 51
+	id_forum = 1000021
 	url_middle = "-0-1-0-"
 	#url_page = input("Forum page: ")
 	url_page = 1
-	url_end = "-0-blabla-18-25-ans.htm"
+	url_end = "-0-communaute.htm"
 	# Main loop
 	while 1:
 		url = url_base + str(id_forum) + url_middle + str(url_page) + url_end

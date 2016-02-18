@@ -32,7 +32,7 @@ client = MongoClient(maxPoolSize=50, waitQueueMultiple=10)
 db = client['jvcrawler']
 db.pseudo.ensure_index("pseudo", unique = True)
 db.jvstalker.ensure_index("ancre", unique = True)
-db.galerie.ensure_index("ancre", unique = True)
+db.galerie.ensure_index("shack", unique = True)
 
 def mainPage():
 	s = requests.Session()
