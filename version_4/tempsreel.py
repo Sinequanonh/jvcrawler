@@ -30,10 +30,13 @@ white = "\033[0m";
 client = MongoClient(maxPoolSize=50, waitQueueMultiple=10)
 # Database
 db = client['jvcrawler']
+# pseudo
 db.pseudo.ensure_index("pseudo", unique = True)
-db.bears.create_index("pseudo")
+# jvstalker
 db.jvstalker.ensure_index("ancre", unique = True)
+# galerie
 db.galerie.ensure_index("shack", unique = True)
+db.galerie.ensure_index("pseudo")
 
 def mainPage():
 	s = requests.Session()
@@ -170,6 +173,11 @@ def get_messages(response):
 			avatar = ""
 		#print avatar
 		# Galerie
+		if "puu.sh" in message:
+			puush = s.findAll('a', attrs={'href': re.compile("//puu.sh/")})
+			for pu in puush:
+				print pu
+
 		if "noelshack.com" in message:
 			noelshack = BeautifulSoup(message, "html.parser")
 			try:
@@ -177,9 +185,8 @@ def get_messages(response):
 				for le_noel in les_noels:
 					shack = str(le_noel.img['src']).replace('//image.noelshack.com/minis/', '') # Add 'image.noelshack.com/minis/' in frontend for a miniature
 																								# Add 'http://image.noelshack.com/fichiers/' in frontend for fullpicture
-					print shack
 					noelshacktoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "shack": shack}
-					insertGalerie(noelshacktoinsert)
+					#insertGalerie(noelshacktoinsert)
 			except:
 				pass
 		#print "================================================================================================"
@@ -192,11 +199,12 @@ def get_messages(response):
 		# thread1 = Thread(target=insertPost, args=(pseudotoinsert,))
 		# thread1.start()
 	 #   	thread1.join()
-		if insertPost(pseudotoinsert) == 1:
-			print red + "None" + white 
-			leave = 1
-		else:
-			print magenta + pseudo + yellow + ' ' + str(date) + white
+		# if insertPost(pseudotoinsert) == 1:
+		# 	print red + "None" + white 
+		# 	leave = 1
+		# else:
+		# 	print magenta + pseudo + yellow + ' ' + str(date) + white
+		print magenta + pseudo + yellow + ' ' + str(date) + white
 	return leave
 
 def parse_date(date):

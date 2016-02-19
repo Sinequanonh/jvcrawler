@@ -30,9 +30,14 @@ white = "\033[0m";
 client = MongoClient(maxPoolSize=50, waitQueueMultiple=10)
 # Database
 db = client['jvcrawler']
+# pseudo
 db.pseudo.ensure_index("pseudo", unique = True)
+db.pseudo.create_index("pseudo")
+# jvstalker
 db.jvstalker.ensure_index("ancre", unique = True)
+# galerie
 db.galerie.ensure_index("shack", unique = True)
+db.galerie.ensure_index("pseudo")
 
 def mainPage():
 	s = requests.Session()
@@ -175,7 +180,6 @@ def get_messages(response):
 				for le_noel in les_noels:
 					shack = str(le_noel.img['src']).replace('//image.noelshack.com/minis/', '') # Add 'image.noelshack.com/minis/' in frontend for a miniature
 																								# Add 'http://image.noelshack.com/fichiers/' in frontend for fullpicture
-					print shack
 					noelshacktoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "shack": shack}
 					insertGalerie(noelshacktoinsert)
 			except:

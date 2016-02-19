@@ -30,28 +30,33 @@ white = "\033[0m";
 client = MongoClient(maxPoolSize=50, waitQueueMultiple=10)
 # Database
 db = client['jvcrawler']
+# pseudo
 db.pseudo.ensure_index("pseudo", unique = True)
-db.bears.create_index("pseudo")
-db.jvstalker.ensure_index("ancre", unique = True)
+# jvstalker
+db.bla1825.ensure_index("ancre", unique = True)
+# galerie
 db.galerie.ensure_index("shack", unique = True)
+db.galerie.ensure_index("pseudo")
+# vocaroo
+db.vocaroo.ensure_index("vocaroo", unique = True)
 
 def mainPage():
 	s = requests.Session()
 	url_base = "https://www.jeuxvideo.com/forums/0-"
 	#id_forum = input("Forum id: ")
-	id_forum = 1000021
+	id_forum = 51
 	url_middle = "-0-1-0-"
-	#url_page = input("Forum page: ")
-	url_page = 1
-	url_end = "-0-communaute.htm"
+	url_page = input("Forum page: ")
+	#url_page = 1
+	url_end = "-0-blabla-18-25-ans.htm"
 	# Main loop
 	while 1:
 		url = url_base + str(id_forum) + url_middle + str(url_page) + url_end
-		print red + url + white
+		#print red + url + white
 		r = singleRequest(url, s)
 		topic_list = get25Topics(r)
 		fromLastPage(topic_list, s)
-		#url_page+=25
+		url_page+=25
 	return
 
 def singleRequest(url, s):
@@ -98,7 +103,7 @@ def fromLastPage(link_list, s):
 			previous_page -= 1
 			previous[3] = str(previous_page)
 			link_list[i] = '-'.join(previous)
-			print cyan + link_list[i] + white
+			#print cyan + link_list[i] + white
 			res = singleRequest(link_list[i], s)
 			if get_messages(res) == 1:
 				break
@@ -110,7 +115,6 @@ def get_messages(response):
 		return 0
 	bloc_message = SoupStrainer('div', {'class': 'bloc-message-forum '})
 	soup = BeautifulSoup(response.text, "html.parser", parse_only=bloc_message)
-	leave = 0
 	for s in soup:
 		if s == None:
 			continue
@@ -118,7 +122,7 @@ def get_messages(response):
 		try:
 			pseudo = s.find('span', attrs={'class': 'bloc-pseudo-msg'})
 			pseudo = pseudo.getText().replace(' ', '').replace('\n', '')
-		except:		
+		except:
 			pseudo = "Pseudo supprimé"
 		#sys.stdout.write(pseudo)
 		#print pseudo
@@ -169,7 +173,32 @@ def get_messages(response):
 		except:
 			avatar = ""
 		#print avatar
-		# Galerie
+		# Get vocaroo
+		if "vocaroo" in message:
+			vocaroo = BeautifulSoup(message, "html.parser")
+			#print "Un vocaroo ! " + str(ancre)
+			vocarooall = vocaroo.find_all('span', attrs={'class', 'JvCare'})
+			#print vocarooall
+			for vo in vocarooall:
+				if "vocaroo.com/" in vo.text:
+					voca = vo.text.split('/')[4]
+					vocarootoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "vocaroo": voca}
+					print blue + voca + white
+					insertVocaroo(vocarootoinsert)
+
+		# Get puu.sh links
+		if "puu.sh" in message:
+			puush = BeautifulSoup(message, "html.parser")
+			puushall = puush.find_all('span', attrs={'class', 'JvCare'})
+			#print vocarooall
+			for pu in puushall:
+				if "puu.sh/" in pu.text:
+					pus = pu.text.split('/')[4]
+					print cyan + pus + white
+					puushtoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "shack": pus, "type": False}
+					insertGalerie(puushtoinsert)
+
+		# Galerie - Get noelshacks
 		if "noelshack.com" in message:
 			noelshack = BeautifulSoup(message, "html.parser")
 			try:
@@ -177,8 +206,7 @@ def get_messages(response):
 				for le_noel in les_noels:
 					shack = str(le_noel.img['src']).replace('//image.noelshack.com/minis/', '') # Add 'image.noelshack.com/minis/' in frontend for a miniature
 																								# Add 'http://image.noelshack.com/fichiers/' in frontend for fullpicture
-					print shack
-					noelshacktoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "shack": shack}
+					noelshacktoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "shack": shack, "type": True}
 					insertGalerie(noelshacktoinsert)
 			except:
 				pass
@@ -193,11 +221,16 @@ def get_messages(response):
 		# thread1.start()
 	 #   	thread1.join()
 		if insertPost(pseudotoinsert) == 1:
-			print red + "None" + white 
-			leave = 1
+			#print red + "None" + white 
+			return 1
 		else:
-			print magenta + pseudo + yellow + ' ' + str(date) + white
-	return leave
+			1
+			#print magenta + pseudo + yellow + ' ' + str(date) + white
+	# try:
+	# 	res.close()
+	# except:
+	# 	pass
+	return 0
 
 def parse_date(date):
 	p_date = date.split(' ')
@@ -240,6 +273,12 @@ def insertPost(post):
 		return 0
 	except:
 		return 1
+
+def insertVocaroo(vocaroo):
+	try:
+		db.vocaroo.insert_one(vocaroo).inserted_id
+	except:
+		pass
 
 def insertPseudo(pseudo):
 	pseudotoinsert = {"pseudo": pseudo['pseudo'],
