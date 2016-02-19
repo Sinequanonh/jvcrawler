@@ -34,8 +34,9 @@ db = client['jvcrawler']
 db.pseudo.ensure_index("pseudo", unique = True)
 # jvstalker
 db.bla1825.ensure_index("ancre", unique = True)
+db.bla1825.ensure_index("pseudo")
 # galerie
-db.galerie.ensure_index("shack", unique = True)
+db.galerie.ensure_index("url_id", unique = True)
 db.galerie.ensure_index("pseudo")
 # vocaroo
 db.vocaroo.ensure_index("vocaroo", unique = True)
@@ -52,7 +53,7 @@ def mainPage():
 	# Main loop
 	while 1:
 		url = url_base + str(id_forum) + url_middle + str(url_page) + url_end
-		#print red + url + white
+		print red + url + white
 		r = singleRequest(url, s)
 		topic_list = get25Topics(r)
 		fromLastPage(topic_list, s)
@@ -103,7 +104,7 @@ def fromLastPage(link_list, s):
 			previous_page -= 1
 			previous[3] = str(previous_page)
 			link_list[i] = '-'.join(previous)
-			#print cyan + link_list[i] + white
+			print cyan + link_list[i] + white
 			res = singleRequest(link_list[i], s)
 			if get_messages(res) == 1:
 				break
@@ -181,10 +182,13 @@ def get_messages(response):
 			#print vocarooall
 			for vo in vocarooall:
 				if "vocaroo.com/" in vo.text:
-					voca = vo.text.split('/')[4]
-					vocarootoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "vocaroo": voca}
-					print blue + voca + white
-					insertVocaroo(vocarootoinsert)
+					try:
+						voca = vo.text.split('/')[4]
+						vocarootoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "vocaroo": voca}
+						print blue + voca + white
+						insertVocaroo(vocarootoinsert)
+					except:
+						pass
 
 		# Get puu.sh links
 		if "puu.sh" in message:
@@ -193,10 +197,17 @@ def get_messages(response):
 			#print vocarooall
 			for pu in puushall:
 				if "puu.sh/" in pu.text:
-					pus = pu.text.split('/')[4]
-					print cyan + pus + white
-					puushtoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "shack": pus, "type": False}
-					insertGalerie(puushtoinsert)
+					print "puuuush!"
+					try:
+						pus = pu.text.split('/')[3] + '/' + pu.text.split('/')[4]
+					except:
+						pus = pu.text.split('/')[3]
+					try:
+						print cyan + pus + white
+						puushtoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "url_id": pus, "type": 0}
+						insertGalerie(puushtoinsert)
+					except:
+						pass
 
 		# Galerie - Get noelshacks
 		if "noelshack.com" in message:
@@ -206,7 +217,7 @@ def get_messages(response):
 				for le_noel in les_noels:
 					shack = str(le_noel.img['src']).replace('//image.noelshack.com/minis/', '') # Add 'image.noelshack.com/minis/' in frontend for a miniature
 																								# Add 'http://image.noelshack.com/fichiers/' in frontend for fullpicture
-					noelshacktoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "shack": shack, "type": True}
+					noelshacktoinsert = {"pseudo": pseudo, "date": date, "ancre": ancre, "url_id": shack, "type": 1}
 					insertGalerie(noelshacktoinsert)
 			except:
 				pass
@@ -221,11 +232,10 @@ def get_messages(response):
 		# thread1.start()
 	 #   	thread1.join()
 		if insertPost(pseudotoinsert) == 1:
-			#print red + "None" + white 
+			print red + "None" + white 
 			return 1
 		else:
-			1
-			#print magenta + pseudo + yellow + ' ' + str(date) + white
+			print yellow + str(date) + ' ' + magenta + pseudo + white
 	# try:
 	# 	res.close()
 	# except:
@@ -268,7 +278,7 @@ def parse_date(date):
 
 def insertPost(post):
 	try:
-		db.jvstalker.insert_one(post).inserted_id
+		db.bla1825.insert_one(post).inserted_id
 		insertPseudo(post)
 		return 0
 	except:
