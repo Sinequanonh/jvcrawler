@@ -56,6 +56,8 @@ def mainPage():
 		print red + url + white
 		r = singleRequest(url, s)
 		topic_list = get25Topics(r)
+		if topic_list == None:
+			continue
 		fromLastPage(topic_list, s)
 		#url_page+=25
 	return
@@ -74,7 +76,10 @@ def singleRequest(url, s):
 
 def get25Topics(r):
 	strainer = SoupStrainer('ul', {'class': re.compile(r'\btopic-list\b')})
-	container_topics = BeautifulSoup(r.text, "html.parser", parse_only=strainer)
+	try:
+		container_topics = BeautifulSoup(r.text, "html.parser", parse_only=strainer)
+	except:
+		return None
 	topics = container_topics.find_all('li')
 	topic_list = []
 	for topic in topics:
