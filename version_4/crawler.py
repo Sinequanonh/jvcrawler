@@ -33,8 +33,8 @@ db = client['jvcrawler']
 # pseudo
 db.pseudo.ensure_index("pseudo", unique = True)
 # jvstalker
-db.bla1825.ensure_index("ancre", unique = True)
-db.bla1825.ensure_index("pseudo")
+db.communaute.ensure_index("ancre", unique = True)
+db.communaute.ensure_index("pseudo")
 # galerie
 db.galerie.ensure_index("url_id", unique = True)
 db.galerie.ensure_index("pseudo")
@@ -45,11 +45,11 @@ def mainPage():
 	s = requests.Session()
 	url_base = "https://www.jeuxvideo.com/forums/0-"
 	#id_forum = input("Forum id: ")
-	id_forum = 51
+	id_forum = 1000021
 	url_middle = "-0-1-0-"
 	url_page = input("Forum page: ")
 	#url_page = 1
-	url_end = "-0-blabla-18-25-ans.htm"
+	url_end = "-0-communaute.htm"
 	# Main loop
 	while 1:
 		url = url_base + str(id_forum) + url_middle + str(url_page) + url_end
@@ -227,7 +227,15 @@ def get_messages(response):
 			except:
 				pass
 		#print "================================================================================================"
-		pseudotoinsert = {"pseudo": pseudo, "message": message, "date": date, "ancre": ancre, "avatar": avatar, "nb_smileys": nb_smileys, "nb_mots": nb_mots, "nb_chars": nb_chars}
+		pseudotoinsert = {
+			"pseudo": pseudo, 
+			"message": message, 
+			"date": date, 
+			"ancre": ancre, 
+			"avatar": avatar, 
+			"nb_smileys": nb_smileys, 
+			"nb_mots": nb_mots, 
+			"nb_chars": nb_chars}
 		try:
 			1#insertSmileys(smiley_list, pseudo)
 		except:
@@ -283,7 +291,7 @@ def parse_date(date):
 
 def insertPost(post):
 	try:
-		db.bla1825.insert_one(post).inserted_id
+		db.communaute.insert_one(post).inserted_id
 		insertPseudo(post)
 		return 0
 	except:

@@ -233,7 +233,15 @@ def get_messages(response):
 			except:
 				pass
 		#print "================================================================================================"
-		pseudotoinsert = {"pseudo": pseudo, "message": message, "date": date, "ancre": ancre, "avatar": avatar, "nb_smileys": nb_smileys, "nb_mots": nb_mots, "nb_chars": nb_chars}
+		pseudotoinsert = {
+			"pseudo": pseudo, 
+			"message": message, 
+			"date": date, 
+			"ancre": ancre, 
+			"avatar": avatar, 
+			"nb_smileys": nb_smileys, 
+			"nb_mots": nb_mots, 
+			"nb_chars": nb_chars}
 		try:
 			1#insertSmileys(smiley_list, pseudo)
 		except:
