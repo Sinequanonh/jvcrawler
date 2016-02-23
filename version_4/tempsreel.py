@@ -138,7 +138,7 @@ def get_messages(response):
 		#print ancre
 		# Message
 		message_raw = s.find('div', attrs={'class': 'text-enrichi-forum'})
-		message = message_raw.renderContents()
+		message = message_raw.renderContents().replace('\n', '')
 		message_raw = message_raw.getText()
 		message_raw = ' '.join(message_raw.split())
 		#print message_raw
